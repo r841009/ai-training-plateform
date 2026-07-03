@@ -27,7 +27,9 @@ def _create_project(client, code: str) -> str:
 def _catalog_ids(client) -> tuple[str, str]:
     base_models = client.get("/base-models").json()["data"]
     trainers = client.get("/trainers").json()["data"]
-    return base_models[0]["id"], trainers[0]["id"]
+    base_model = next(m for m in base_models if m["name"] == "fasterrcnn_resnet50_fpn")
+    trainer = next(t for t in trainers if t["base_model_family"] == base_model["family"])
+    return base_model["id"], trainer["id"]
 
 
 def _create_ready_dataset(client, project_id: str) -> str:
@@ -225,4 +227,3 @@ def test_dispatch_once_respects_server_concurrency_limit(client):
     second_status = client.get(f"/projects/{project_id}/training-jobs/{second['id']}").json()["data"]["status"]
     assert sorted([first_status, second_status]) == ["DISPATCHED", "QUEUED"]
     assert client.get(f"/training-servers/{server_id}").json()["data"]["running_job_count"] == 1
-

@@ -28,7 +28,17 @@ def _create_project(client, code: str) -> str:
 def _catalog_ids(client) -> tuple[str, str]:
     base_models = client.get("/base-models").json()["data"]
     trainers = client.get("/trainers").json()["data"]
-    return base_models[0]["id"], trainers[0]["id"]
+    base_model = next(m for m in base_models if m["name"] == "fasterrcnn_resnet50_fpn")
+    trainer = next(t for t in trainers if t["base_model_family"] == base_model["family"])
+    return base_model["id"], trainer["id"]
+
+
+def _yolo_catalog_ids(client) -> tuple[str, str]:
+    base_models = client.get("/base-models").json()["data"]
+    trainers = client.get("/trainers").json()["data"]
+    base_model = next(m for m in base_models if m["name"] == "yolov8s")
+    trainer = next(t for t in trainers if t["trainer_name"] == "yolo_trainer")
+    return base_model["id"], trainer["id"]
 
 
 def _create_ready_dataset(client, project_id: str) -> str:
@@ -148,6 +158,36 @@ def test_create_training_job_requires_existing_catalog_entries(client):
     assert missing_trainer.status_code == 404
 
 
+def test_create_training_job_blocks_restricted_yolo_model(client):
+    project_id = _create_project(client, "JOB_YOLO_BLOCK")
+    dataset_version_id = _create_ready_dataset(client, project_id)
+    base_model_id, trainer_id = _yolo_catalog_ids(client)
+
+    resp = client.post(
+        f"/projects/{project_id}/training-jobs",
+        json=_training_job_payload(dataset_version_id, base_model_id, trainer_id),
+    )
+
+    assert resp.status_code == 409
+    assert "not approved for OEM" in resp.json()["error"]["message"]
+
+
+def test_create_training_job_rejects_incompatible_trainer_family(client):
+    project_id = _create_project(client, "JOB_TRAINER_FAMILY")
+    dataset_version_id = _create_ready_dataset(client, project_id)
+    base_model_id, _ = _catalog_ids(client)
+    trainers = client.get("/trainers").json()["data"]
+    incompatible_trainer = next(t for t in trainers if t["trainer_name"] == "detr_trainer")
+
+    resp = client.post(
+        f"/projects/{project_id}/training-jobs",
+        json=_training_job_payload(dataset_version_id, base_model_id, incompatible_trainer["id"]),
+    )
+
+    assert resp.status_code == 409
+    assert "does not support base model family" in resp.json()["error"]["message"]
+
+
 def test_training_job_endpoints_require_existing_project(client):
     missing_project_id = uuid.uuid4()
     base_model_id, trainer_id = _catalog_ids(client)
@@ -160,4 +200,3 @@ def test_training_job_endpoints_require_existing_project(client):
 
     list_resp = client.get(f"/projects/{missing_project_id}/training-jobs")
     assert list_resp.status_code == 404
-

@@ -41,10 +41,27 @@ class TrainingJobService:
         base_model = self.base_model_repo.get(payload.base_model_id)
         if base_model is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "base model not found")
+        if not base_model.is_active:
+            raise HTTPException(status.HTTP_409_CONFLICT, "base model is not active")
+        if base_model.requires_enterprise_license or not base_model.oem_use_allowed:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                (
+                    f"base model '{base_model.name}' is not approved for OEM/proprietary training; "
+                    f"license={base_model.license_name}"
+                ),
+            )
 
         trainer = self.trainer_repo.get(payload.trainer_id)
         if trainer is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "trainer not found")
+        if not trainer.is_active:
+            raise HTTPException(status.HTTP_409_CONFLICT, "trainer is not active")
+        if trainer.base_model_family != "*" and trainer.base_model_family != base_model.family:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"trainer '{trainer.trainer_name}' does not support base model family '{base_model.family}'",
+            )
 
         training_job = TrainingJob(
             project_id=project_id,
@@ -67,4 +84,3 @@ class TrainingJobService:
     def list_training_jobs(self, project_id: uuid.UUID) -> list[TrainingJob]:
         self._require_project(project_id)
         return self.repo.list_for_project(project_id)
-
