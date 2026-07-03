@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from app.logging_config import configure_logging
-from app.routers import base_models, dataset_versions, health, projects, trainers, training_servers
+from app.routers import base_models, dataset_versions, health, projects, trainers, training_jobs, training_servers
 from app.schemas.response import error_response
 
 configure_logging()
@@ -15,6 +15,7 @@ app.include_router(projects.router)
 app.include_router(base_models.router)
 app.include_router(trainers.router)
 app.include_router(dataset_versions.router)
+app.include_router(training_jobs.router)
 app.include_router(training_servers.router)
 
 
