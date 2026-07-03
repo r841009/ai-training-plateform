@@ -65,15 +65,22 @@ class DatasetVersionService:
         self.repo.save(dataset_version)
 
         raw_dir = Path(dataset_version.storage_path) / "raw"
+        tmp_path: Path | None = None
         try:
-            with tempfile.NamedTemporaryFile(suffix=".zip") as tmp:
+            with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
                 tmp.write(content)
-                tmp.flush()
-                safe_extract_zip(Path(tmp.name), raw_dir)
+                tmp_path = Path(tmp.name)
+            safe_extract_zip(tmp_path, raw_dir)
         except Exception as exc:
             dataset_version.status = previous_status
             self.repo.save(dataset_version)
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"invalid zip upload: {exc}") from exc
+        finally:
+            if tmp_path is not None:
+                try:
+                    tmp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
         dataset_version.status = "UPLOADED"
         return self.repo.save(dataset_version)
