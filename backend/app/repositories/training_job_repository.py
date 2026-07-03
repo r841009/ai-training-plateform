@@ -28,3 +28,16 @@ class TrainingJobRepository:
             )
         )
 
+    def list_dispatch_candidates(self) -> list[TrainingJob]:
+        return list(
+            self.db.scalars(
+                select(TrainingJob)
+                .where(TrainingJob.status.in_(("PENDING", "QUEUED")))
+                .order_by(TrainingJob.created_at)
+            )
+        )
+
+    def save(self, training_job: TrainingJob) -> TrainingJob:
+        self.db.commit()
+        self.db.refresh(training_job)
+        return training_job

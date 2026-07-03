@@ -25,8 +25,12 @@ class TrainingServerRepository:
     def list(self) -> list[TrainingServer]:
         return list(self.db.scalars(select(TrainingServer).order_by(TrainingServer.hostname)))
 
+    def list_online(self) -> list[TrainingServer]:
+        return list(
+            self.db.scalars(select(TrainingServer).where(TrainingServer.status == "ONLINE").order_by(TrainingServer.hostname))
+        )
+
     def save(self, training_server: TrainingServer) -> TrainingServer:
         self.db.commit()
         self.db.refresh(training_server)
         return training_server
-
