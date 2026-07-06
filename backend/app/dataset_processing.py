@@ -133,14 +133,30 @@ def _write_validation_report(validation_dir: Path, report: DatasetValidationRepo
     (validation_dir / "invalid_files.json").write_text(json.dumps([e.model_dump() for e in invalid_entries], indent=2))
 
 
+def _build_validation_report(
+    dataset_version_id: UUID,
+    total_files: int,
+    valid_files: int,
+    invalid_files: int,
+    class_distribution: dict[str, int],
+) -> DatasetValidationReport:
+    return DatasetValidationReport(
+        dataset_version_id=dataset_version_id,
+        total_files=total_files,
+        valid_files=valid_files,
+        invalid_files=invalid_files,
+        class_distribution=class_distribution,
+        generated_at=datetime.now(timezone.utc),
+    )
+
+
 def write_invalid_report(storage_path: Path, dataset_version_id: UUID, outcome: ValidationOutcome) -> ProcessingResult:
-    report = DatasetValidationReport(
+    report = _build_validation_report(
         dataset_version_id=dataset_version_id,
         total_files=len(outcome.invalid_entries),
         valid_files=0,
         invalid_files=len(outcome.invalid_entries),
         class_distribution={},
-        generated_at=datetime.now(timezone.utc),
     )
     _write_validation_report(storage_path / "validation", report, outcome.invalid_entries)
     return ProcessingResult(status="INVALID", report=report)
@@ -185,13 +201,12 @@ def finalize_dataset(
     }
     (manifests_dir / "dataset_statistics.json").write_text(json.dumps(statistics, indent=2))
 
-    report = DatasetValidationReport(
+    report = _build_validation_report(
         dataset_version_id=dataset_version_id,
         total_files=total_files,
         valid_files=len(outcome.manifest_entries),
         invalid_files=len(outcome.invalid_entries),
         class_distribution={str(k): v for k, v in outcome.class_distribution.items()},
-        generated_at=datetime.now(timezone.utc),
     )
     _write_validation_report(storage_path / "validation", report, outcome.invalid_entries)
 

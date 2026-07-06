@@ -29,7 +29,7 @@ docker compose up -d
 
 ## 目前進度
 
-目前已完成到 **Phase 8：Scheduler / Dispatcher**，並完成一項緊急的模型授權安全修正。
+目前已完成到 **Phase 15：Frontend**，並完成一項緊急的模型授權安全修正。
 
 已完成：
 
@@ -42,11 +42,44 @@ docker compose up -d
 - Phase 6：Training Server Resource Monitor，支援 server 註冊與 resource heartbeat
 - Phase 7：Project-scoped Training Job API，支援 `resource_requirement_json`
 - Phase 8：Scheduler / Dispatcher，可掃描 `PENDING` / `QUEUED` jobs，依 Dataset READY 狀態與 Training Server 資源進行 `DISPATCHED` / `QUEUED` / `FAILED` 狀態流
+- Phase 9：Worker Manager，可取得 `DISPATCHED` jobs，執行 mock trainer，回報 heartbeat，更新 `RUNNING` / `SUCCESS` / `FAILED`，並在 Project-scoped storage 路徑捕捉 worker log
+- Phase 10：Training Script 第一版，`trainers/mock_train.py` 可讀取 config / manifest，輸出 `metrics.jsonl` 與 latest/best checkpoints
+- Phase 11：Checkpoint / Resume，支援 `checkpoints` table、resume API、`RESUMABLE` jobs 重新派工，以及 Worker 中斷後 checkpoint 偵測
+- Phase 12：Model Version 模組，訓練成功後產生 Project-scoped Model Version，支援 `version_no` 與 `parent_model_version_id`
+- Phase 13：Retrain，可從同一 Project 內既有 Model Version 建立 child Training Job，並在成功後產生 child Model Version
+- Phase 14：Evaluation Dataset 與 Evaluation Result，支援 Project-scoped evaluation dataset 與 mock evaluation result
+- Phase 15：Vue 3 + Element Plus 前端操作台，支援 Project List / Project Detail、Dataset、Training Job、Model Version、Evaluation、Retrain
 - 緊急授權安全修正：Base Model 目錄已加入授權欄位，YOLO 系列預設封鎖 OEM/proprietary training，並加入較適合商用評估的替代 detection model catalog
 
 下一步：
 
-- Phase 9：Worker Manager，取得 `DISPATCHED` job，啟動 mock trainer，回報 heartbeat，更新 job status
+- Phase 16：整合測試，串起 Project / Dataset / Training / Worker / Model / Evaluation / Retrain 流程
+
+## Frontend
+
+```powershell
+# terminal 1: backend API
+cd backend
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+
+# terminal 2: frontend static app
+cd ..
+python -m http.server 5173 --directory frontend
+```
+
+開啟 `http://127.0.0.1:5173?mock=1`。前端預設使用 standalone mock API，不需要 PostgreSQL / Redis / backend。
+
+如需切換到真實 API，可在瀏覽器 console 設定：
+
+```js
+localStorage.setItem('apiBase', 'http://127.0.0.1:8000')
+```
+
+切回 standalone mock：
+
+```js
+localStorage.setItem('apiBase', 'mock')
+```
 
 ## Backend 測試
 
@@ -58,8 +91,27 @@ cd backend
 
 目前最近一次實測結果：
 
-- `58 passed`
-- Alembic head：`c1d2e3f4a5b6`
+- `69 passed`
+- Alembic head：`f4a5b6c7d8e9`
+
+## Worker Manager 第一版
+
+```powershell
+# 需先讓 Scheduler 將 job 派成 DISPATCHED，並填入 assigned_server_id
+$env:PYTHONPATH = ".\backend"
+.\backend\.venv\Scripts\python.exe -m worker.worker_manager <training_server_id>
+```
+
+## Training Script 第一版
+
+```powershell
+.\backend\.venv\Scripts\python.exe -m trainers.mock_train `
+  --config training_config.json `
+  --job-id <training_job_id> `
+  --manifest dataset_manifest.jsonl `
+  --output-dir <job_output_dir> `
+  --resume
+```
 
 ## 目前主要 API
 
@@ -80,6 +132,14 @@ cd backend
 - `POST /training-servers/{training_server_id}/heartbeat`
 - `POST /projects/{project_id}/training-jobs`
 - `GET /projects/{project_id}/training-jobs`
+- `POST /projects/{project_id}/training-jobs/{training_job_id}/resume`
+- `GET /projects/{project_id}/model-versions`
+- `GET /projects/{project_id}/model-versions/{model_version_id}`
+- `POST /projects/{project_id}/model-versions/{model_version_id}/retrain`
+- `POST /projects/{project_id}/model-versions/{model_version_id}/evaluate`
+- `POST /projects/{project_id}/evaluation-datasets`
+- `GET /projects/{project_id}/evaluation-datasets`
+- `GET /projects/{project_id}/evaluation-results`
 - `POST /scheduler/dispatch-once`
 
 ## 模型授權安全狀態

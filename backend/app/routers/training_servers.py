@@ -23,22 +23,19 @@ def get_service(db: Session = Depends(get_db)) -> TrainingServerService:
 def create_training_server(
     payload: TrainingServerCreate, service: TrainingServerService = Depends(get_service)
 ):
-    training_server = service.create_training_server(payload)
-    return success_response(TrainingServerRead.model_validate(training_server))
+    return success_response(TrainingServerRead.model_validate(service.create_training_server(payload)))
 
 
 @router.get("", response_model=ApiResponse[list[TrainingServerRead]])
 def list_training_servers(service: TrainingServerService = Depends(get_service)):
-    training_servers = service.list_training_servers()
-    return success_response([TrainingServerRead.model_validate(s) for s in training_servers])
+    return success_response([TrainingServerRead.model_validate(s) for s in service.list_training_servers()])
 
 
 @router.get("/{training_server_id}", response_model=ApiResponse[TrainingServerRead])
 def get_training_server(
     training_server_id: uuid.UUID, service: TrainingServerService = Depends(get_service)
 ):
-    training_server = service.get_training_server(training_server_id)
-    return success_response(TrainingServerRead.model_validate(training_server))
+    return success_response(TrainingServerRead.model_validate(service.get_training_server(training_server_id)))
 
 
 @router.post("/{training_server_id}/heartbeat", response_model=ApiResponse[TrainingServerRead])
@@ -47,6 +44,6 @@ def record_training_server_heartbeat(
     payload: TrainingServerHeartbeat,
     service: TrainingServerService = Depends(get_service),
 ):
-    training_server = service.record_heartbeat(training_server_id, payload)
-    return success_response(TrainingServerRead.model_validate(training_server))
-
+    return success_response(
+        TrainingServerRead.model_validate(service.record_heartbeat(training_server_id, payload))
+    )

@@ -32,8 +32,18 @@ class TrainingJobRepository:
         return list(
             self.db.scalars(
                 select(TrainingJob)
-                .where(TrainingJob.status.in_(("PENDING", "QUEUED")))
+                .where(TrainingJob.status.in_(("PENDING", "QUEUED", "RESUMABLE")))
                 .order_by(TrainingJob.created_at)
+            )
+        )
+
+    def list_dispatched_for_server(self, server_id: uuid.UUID, limit: int = 1) -> list[TrainingJob]:
+        return list(
+            self.db.scalars(
+                select(TrainingJob)
+                .where(TrainingJob.status == "DISPATCHED", TrainingJob.assigned_server_id == server_id)
+                .order_by(TrainingJob.created_at)
+                .limit(limit)
             )
         )
 

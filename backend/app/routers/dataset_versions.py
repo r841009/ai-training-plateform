@@ -21,22 +21,25 @@ def create_dataset_version(
     payload: DatasetVersionCreate,
     service: DatasetVersionService = Depends(get_service),
 ):
-    dataset_version = service.create_dataset_version(project_id, payload)
-    return success_response(DatasetVersionRead.model_validate(dataset_version))
+    return success_response(
+        DatasetVersionRead.model_validate(service.create_dataset_version(project_id, payload))
+    )
 
 
 @router.get("", response_model=ApiResponse[list[DatasetVersionRead]])
 def list_dataset_versions(project_id: uuid.UUID, service: DatasetVersionService = Depends(get_service)):
-    dataset_versions = service.list_dataset_versions(project_id)
-    return success_response([DatasetVersionRead.model_validate(d) for d in dataset_versions])
+    return success_response(
+        [DatasetVersionRead.model_validate(d) for d in service.list_dataset_versions(project_id)]
+    )
 
 
 @router.get("/{dataset_version_id}", response_model=ApiResponse[DatasetVersionRead])
 def get_dataset_version(
     project_id: uuid.UUID, dataset_version_id: uuid.UUID, service: DatasetVersionService = Depends(get_service)
 ):
-    dataset_version = service.get_dataset_version(project_id, dataset_version_id)
-    return success_response(DatasetVersionRead.model_validate(dataset_version))
+    return success_response(
+        DatasetVersionRead.model_validate(service.get_dataset_version(project_id, dataset_version_id))
+    )
 
 
 @router.post("/{dataset_version_id}/upload", response_model=ApiResponse[DatasetVersionRead])
@@ -48,9 +51,9 @@ async def upload_dataset_zip(
 ):
     if not file.filename or not file.filename.lower().endswith(".zip"):
         raise HTTPException(422, "only .zip uploads are supported")
-    content = await file.read()
-    dataset_version = service.ingest_zip(project_id, dataset_version_id, content)
-    return success_response(DatasetVersionRead.model_validate(dataset_version))
+    return success_response(
+        DatasetVersionRead.model_validate(service.ingest_zip(project_id, dataset_version_id, await file.read()))
+    )
 
 
 @router.post("/{dataset_version_id}/process", response_model=ApiResponse[DatasetVersionRead])

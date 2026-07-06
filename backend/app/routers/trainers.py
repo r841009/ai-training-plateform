@@ -17,11 +17,9 @@ def get_service(db: Session = Depends(get_db)) -> TrainerService:
 
 @router.get("", response_model=ApiResponse[list[TrainerRead]])
 def list_trainers(service: TrainerService = Depends(get_service)):
-    trainers = service.list_trainers()
-    return success_response([TrainerRead.model_validate(t) for t in trainers])
+    return success_response([TrainerRead.model_validate(t) for t in service.list_trainers()])
 
 
 @router.get("/{trainer_id}", response_model=ApiResponse[TrainerRead])
 def get_trainer(trainer_id: uuid.UUID, service: TrainerService = Depends(get_service)):
-    trainer = service.get_trainer(trainer_id)
-    return success_response(TrainerRead.model_validate(trainer))
+    return success_response(TrainerRead.model_validate(service.get_trainer(trainer_id)))

@@ -17,10 +17,9 @@ class ProjectService:
             raise HTTPException(
                 status.HTTP_409_CONFLICT, f"project_code '{payload.project_code}' already exists"
             )
-        project = Project(
-            project_code=payload.project_code, name=payload.name, description=payload.description
+        return self.repo.create(
+            Project(project_code=payload.project_code, name=payload.name, description=payload.description)
         )
-        return self.repo.create(project)
 
     def get_project(self, project_id: uuid.UUID) -> Project:
         project = self.repo.get(project_id)

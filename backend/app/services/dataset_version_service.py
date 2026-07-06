@@ -13,7 +13,6 @@ from app.schemas.dataset_version import DatasetProcessRequest, DatasetVersionCre
 from app.storage import dataset_storage_path, ensure_dataset_dirs, safe_extract_zip
 
 UPLOADABLE_STATUSES = {"CREATED", "UPLOADED"}
-PROCESSABLE_STATUSES = {"UPLOADED"}
 
 
 class DatasetVersionService:
@@ -33,14 +32,15 @@ class DatasetVersionService:
         storage_path = dataset_storage_path(project.project_code, version_no)
         ensure_dataset_dirs(storage_path)
 
-        dataset_version = DatasetVersion(
-            project_id=project_id,
-            version_no=version_no,
-            status="CREATED",
-            storage_path=str(storage_path),
-            description=payload.description,
+        return self.repo.create(
+            DatasetVersion(
+                project_id=project_id,
+                version_no=version_no,
+                status="CREATED",
+                storage_path=str(storage_path),
+                description=payload.description,
+            )
         )
-        return self.repo.create(dataset_version)
 
     def get_dataset_version(self, project_id: uuid.UUID, dataset_version_id: uuid.UUID) -> DatasetVersion:
         self._require_project(project_id)
@@ -65,22 +65,15 @@ class DatasetVersionService:
         self.repo.save(dataset_version)
 
         raw_dir = Path(dataset_version.storage_path) / "raw"
-        tmp_path: Path | None = None
         try:
-            with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
-                tmp.write(content)
-                tmp_path = Path(tmp.name)
-            safe_extract_zip(tmp_path, raw_dir)
+            with tempfile.TemporaryDirectory() as temp_dir:
+                tmp_path = Path(temp_dir) / "upload.zip"
+                tmp_path.write_bytes(content)
+                safe_extract_zip(tmp_path, raw_dir)
         except Exception as exc:
             dataset_version.status = previous_status
             self.repo.save(dataset_version)
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"invalid zip upload: {exc}") from exc
-        finally:
-            if tmp_path is not None:
-                try:
-                    tmp_path.unlink(missing_ok=True)
-                except OSError:
-                    pass
 
         dataset_version.status = "UPLOADED"
         return self.repo.save(dataset_version)
@@ -89,7 +82,7 @@ class DatasetVersionService:
         self, project_id: uuid.UUID, dataset_version_id: uuid.UUID, payload: DatasetProcessRequest
     ) -> DatasetVersion:
         dataset_version = self.get_dataset_version(project_id, dataset_version_id)
-        if dataset_version.status not in PROCESSABLE_STATUSES:
+        if dataset_version.status != "UPLOADED":
             raise HTTPException(
                 status.HTTP_409_CONFLICT, f"cannot process while status is {dataset_version.status}"
             )

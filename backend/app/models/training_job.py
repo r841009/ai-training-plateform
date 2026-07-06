@@ -8,17 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base
 from app.types import GUID
 
-TRAINING_JOB_STATUSES = (
-    "PENDING",
-    "RESOURCE_CHECKING",
-    "QUEUED",
-    "DISPATCHED",
-    "RUNNING",
-    "SUCCESS",
-    "FAILED",
-    "CANCELLED",
-)
-
 
 class TrainingJob(Base):
     __tablename__ = "training_jobs"
@@ -41,4 +30,3 @@ class TrainingJob(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
-

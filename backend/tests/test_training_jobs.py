@@ -4,6 +4,9 @@ import zipfile
 
 from PIL import Image
 
+from app.db import get_db
+from app.main import app
+
 
 def _real_jpeg_bytes() -> bytes:
     buf = io.BytesIO()
@@ -30,14 +33,6 @@ def _catalog_ids(client) -> tuple[str, str]:
     trainers = client.get("/trainers").json()["data"]
     base_model = next(m for m in base_models if m["name"] == "fasterrcnn_resnet50_fpn")
     trainer = next(t for t in trainers if t["base_model_family"] == base_model["family"])
-    return base_model["id"], trainer["id"]
-
-
-def _yolo_catalog_ids(client) -> tuple[str, str]:
-    base_models = client.get("/base-models").json()["data"]
-    trainers = client.get("/trainers").json()["data"]
-    base_model = next(m for m in base_models if m["name"] == "yolov8s")
-    trainer = next(t for t in trainers if t["trainer_name"] == "yolo_trainer")
     return base_model["id"], trainer["id"]
 
 
@@ -161,7 +156,10 @@ def test_create_training_job_requires_existing_catalog_entries(client):
 def test_create_training_job_blocks_restricted_yolo_model(client):
     project_id = _create_project(client, "JOB_YOLO_BLOCK")
     dataset_version_id = _create_ready_dataset(client, project_id)
-    base_model_id, trainer_id = _yolo_catalog_ids(client)
+    base_models = client.get("/base-models").json()["data"]
+    trainers = client.get("/trainers").json()["data"]
+    base_model_id = next(m for m in base_models if m["name"] == "yolov8s")["id"]
+    trainer_id = next(t for t in trainers if t["trainer_name"] == "yolo_trainer")["id"]
 
     resp = client.post(
         f"/projects/{project_id}/training-jobs",
@@ -200,3 +198,30 @@ def test_training_job_endpoints_require_existing_project(client):
 
     list_resp = client.get(f"/projects/{missing_project_id}/training-jobs")
     assert list_resp.status_code == 404
+
+
+def test_resume_training_job_requires_latest_checkpoint(client):
+    project_id = _create_project(client, "JOB_RESUME_NO_CKPT")
+    dataset_version_id = _create_ready_dataset(client, project_id)
+    base_model_id, trainer_id = _catalog_ids(client)
+    job = client.post(
+        f"/projects/{project_id}/training-jobs",
+        json=_training_job_payload(dataset_version_id, base_model_id, trainer_id),
+    ).json()["data"]
+
+    override = app.dependency_overrides[get_db]
+    db_gen = override()
+    db = next(db_gen)
+    try:
+        from app.models.training_job import TrainingJob
+
+        training_job = db.get(TrainingJob, uuid.UUID(job["id"]))
+        training_job.status = "INTERRUPTED"
+        db.commit()
+    finally:
+        db_gen.close()
+
+    resp = client.post(f"/projects/{project_id}/training-jobs/{job['id']}/resume")
+
+    assert resp.status_code == 409
+    assert resp.json()["error"]["message"] == "checkpoint_latest.pt not found"

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Training Platform</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js",
+          "element-plus": "https://unpkg.com/element-plus/dist/index.full.mjs",
+          "@element-plus/icons-vue": "https://unpkg.com/@element-plus/icons-vue/dist/index.min.mjs"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <template id="app-template">
+      <el-container class="shell">
+        <el-aside width="320px" class="sidebar">
+          <div class="brand">
+            <h1>AI Training Platform</h1>
+            <el-space>
+              <el-tag size="small" :type="apiMode === 'mock' ? 'warning' : 'success'">{{ apiMode }}</el-tag>
+              <el-button :icon="Refresh" circle @click="loadAll" :loading="loading"></el-button>
+            </el-space>
+          </div>
+
+          <el-form :model="projectForm" label-position="top" class="compact-form" @submit.prevent>
+            <el-form-item label="Project Code">
+              <el-input v-model="projectForm.project_code" placeholder="AOI_DEMO" />
+            </el-form-item>
+            <el-form-item label="Name">
+              <el-input v-model="projectForm.name" placeholder="AOI Demo" />
+            </el-form-item>
+            <el-form-item label="Description">
+              <el-input v-model="projectForm.description" type="textarea" :rows="2" />
+            </el-form-item>
+            <el-button type="primary" :icon="Plus" @click="createProject">Create Project</el-button>
+          </el-form>
+
+          <el-divider />
+          <el-scrollbar class="project-list">
+            <button
+              v-for="project in projects"
+              :key="project.id"
+              class="project-row"
+              :class="{ active: selectedProjectId === project.id }"
+              @click="selectProject(project.id)"
+            >
+              <strong>{{ project.project_code }}</strong>
+              <span>{{ project.name }}</span>
+            </button>
+          </el-scrollbar>
+        </el-aside>
+
+        <el-main class="main">
+          <el-alert v-if="error" :title="error" type="error" show-icon closable @close="error = ''" />
+
+          <section v-if="selectedProject" class="topbar">
+            <div>
+              <p class="eyebrow">{{ selectedProject.project_code }}</p>
+              <h2>{{ selectedProject.name }}</h2>
+              <p>{{ selectedProject.description || 'No description' }}</p>
+            </div>
+            <el-space wrap>
+              <el-button :icon="Cpu" @click="dispatchOnce">Dispatch Once</el-button>
+              <el-button type="primary" :icon="Refresh" @click="refreshProject" :loading="loading">Refresh</el-button>
+            </el-space>
+          </section>
+
+          <el-empty v-else description="Create or select a project to begin." />
+
+          <el-tabs v-if="selectedProject" v-model="activeTab" class="tabs">
+            <el-tab-pane label="Overview" name="overview">
+              <div class="stats">
+                <div><span>{{ datasets.length }}</span><label>Datasets</label></div>
+                <div><span>{{ jobs.length }}</span><label>Training Jobs</label></div>
+                <div><span>{{ models.length }}</span><label>Model Versions</label></div>
+                <div><span>{{ results.length }}</span><label>Evaluation Results</label></div>
+              </div>
+            </el-tab-pane>
+
+            <el-tab-pane label="Dataset Versions" name="datasets">
+              <div class="toolbar">
+                <el-input v-model="datasetForm.description" placeholder="Dataset description" />
+                <el-button type="primary" :icon="Plus" @click="createDataset">Create Dataset</el-button>
+              </div>
+              <div class="toolbar">
+                <el-select v-model="selectedDatasetId" placeholder="Dataset" filterable>
+                  <el-option v-for="d in datasets" :key="d.id" :label="datasetLabel(d)" :value="d.id" />
+                </el-select>
+                <input type="file" @change="setUploadFile" />
+                <el-button :icon="Upload" :disabled="!selectedDatasetId || !uploadFile" @click="uploadDataset">
+                  Upload Zip
+                </el-button>
+                <el-button :icon="VideoPlay" :disabled="!selectedDatasetId" @click="processDataset">Process</el-button>
+              </div>
+              <el-table :data="datasets" stripe>
+                <el-table-column prop="version_no" label="Version" width="90" />
+                <el-table-column prop="status" label="Status" width="120" />
+                <el-table-column prop="description" label="Description" />
+                <el-table-column prop="storage_path" label="Storage" />
+              </el-table>
+            </el-tab-pane>
+
+            <el-tab-pane label="Training Jobs" name="jobs">
+              <div class="form-grid">
+                <el-select v-model="jobForm.dataset_version_id" placeholder="Dataset" filterable>
+                  <el-option v-for="d in readyDatasets" :key="d.id" :label="datasetLabel(d)" :value="d.id" />
+                </el-select>
+                <el-select v-model="jobForm.base_model_id" placeholder="Base model" filterable @change="pickTrainer">
+                  <el-option v-for="m in baseModels" :key="m.id" :label="m.name" :value="m.id" />
+                </el-select>
+                <el-select v-model="jobForm.trainer_id" placeholder="Trainer" filterable>
+                  <el-option v-for="t in trainers" :key="t.id" :label="t.trainer_name" :value="t.id" />
+                </el-select>
+                <el-input-number v-model="epochs" :min="1" />
+                <el-button type="primary" :icon="Plus" @click="createTrainingJob">Create Job</el-button>
+              </div>
+              <el-table :data="jobs" stripe>
+                <el-table-column prop="status" label="Status" width="120" />
+                <el-table-column label="Dataset" min-width="220">
+                  <template #default="{ row }">{{ shortId(row.dataset_version_id) }}</template>
+                </el-table-column>
+                <el-table-column label="Config">
+                  <template #default="{ row }">{{ jsonLine(row.training_config_json) }}</template>
+                </el-table-column>
+                <el-table-column label="Action" width="120">
+                  <template #default="{ row }">
+                    <el-button size="small" :disabled="row.status !== 'INTERRUPTED'" @click="resumeJob(row.id)">Resume</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-tab-pane>
+
+            <el-tab-pane label="Model Versions" name="models">
+              <el-table :data="models" stripe>
+                <el-table-column prop="version_no" label="Version" width="90" />
+                <el-table-column prop="name" label="Name" />
+                <el-table-column label="Parent" width="160">
+                  <template #default="{ row }">{{ shortId(row.parent_model_version_id) || '-' }}</template>
+                </el-table-column>
+                <el-table-column label="Actions" width="220">
+                  <template #default="{ row }">
+                    <el-button size="small" :icon="MagicStick" @click="evaluate(row.id)">Evaluate</el-button>
+                    <el-button size="small" @click="retrain(row.id)">Retrain</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-tab-pane>
+
+            <el-tab-pane label="Evaluation Results" name="evaluations">
+              <div class="form-grid">
+                <el-input v-model="evalDatasetForm.name" placeholder="Evaluation dataset name" />
+                <el-select v-model="evalDatasetForm.dataset_version_id" placeholder="Optional dataset version" clearable filterable>
+                  <el-option v-for="d in readyDatasets" :key="d.id" :label="datasetLabel(d)" :value="d.id" />
+                </el-select>
+                <el-input v-model="evalDatasetForm.storage_path" placeholder="Optional external storage path" />
+                <el-button type="primary" :icon="Plus" @click="createEvaluationDataset">Create Eval Dataset</el-button>
+              </div>
+              <div class="toolbar">
+                <el-select v-model="selectedEvaluationDatasetId" placeholder="Evaluation dataset for next run" clearable filterable>
+                  <el-option v-for="d in evaluationDatasets" :key="d.id" :label="d.name" :value="d.id" />
+                </el-select>
+              </div>
+              <el-table :data="results" stripe>
+                <el-table-column label="Model" min-width="220">
+                  <template #default="{ row }">{{ shortId(row.model_version_id) }}</template>
+                </el-table-column>
+                <el-table-column label="Metrics">
+                  <template #default="{ row }">{{ jsonLine(row.metrics_json) }}</template>
+                </el-table-column>
+                <el-table-column prop="report_path" label="Report" />
+              </el-table>
+            </el-tab-pane>
+          </el-tabs>
+        </el-main>
+      </el-container>
+    </template>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

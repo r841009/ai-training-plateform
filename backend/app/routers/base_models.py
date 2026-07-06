@@ -17,11 +17,9 @@ def get_service(db: Session = Depends(get_db)) -> BaseModelService:
 
 @router.get("", response_model=ApiResponse[list[BaseModelRead]])
 def list_base_models(service: BaseModelService = Depends(get_service)):
-    base_models = service.list_base_models()
-    return success_response([BaseModelRead.model_validate(m) for m in base_models])
+    return success_response([BaseModelRead.model_validate(m) for m in service.list_base_models()])
 
 
 @router.get("/{base_model_id}", response_model=ApiResponse[BaseModelRead])
 def get_base_model(base_model_id: uuid.UUID, service: BaseModelService = Depends(get_service)):
-    base_model = service.get_base_model(base_model_id)
-    return success_response(BaseModelRead.model_validate(base_model))
+    return success_response(BaseModelRead.model_validate(service.get_base_model(base_model_id)))

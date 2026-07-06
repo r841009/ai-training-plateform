@@ -15,17 +15,13 @@ def ensure_dataset_dirs(base: Path) -> None:
         (base / sub).mkdir(parents=True, exist_ok=True)
 
 
-def safe_extract_zip(zip_path: Path, dest: Path) -> int:
+def safe_extract_zip(zip_path: Path, dest: Path) -> None:
     """Extract zip_path into dest, rejecting entries that escape dest (zip-slip)."""
     dest = dest.resolve()
     dest.mkdir(parents=True, exist_ok=True)
-    file_count = 0
     with zipfile.ZipFile(zip_path) as zf:
         for member in zf.infolist():
             member_path = (dest / member.filename).resolve()
             if member_path != dest and dest not in member_path.parents:
                 raise ValueError(f"unsafe zip entry escapes destination: {member.filename}")
-            if not member.is_dir():
-                file_count += 1
         zf.extractall(dest)
-    return file_count

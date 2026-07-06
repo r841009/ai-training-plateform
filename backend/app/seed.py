@@ -49,6 +49,33 @@ def apache_license(provider: str, license_url: str = APACHE_2_LICENSE_URL) -> di
     }
 
 
+YOLOX_LICENSE = apache_license("Megvii YOLOX", "https://github.com/Megvii-BaseDetection/YOLOX/blob/main/LICENSE")
+DETECTRON2_LICENSE = apache_license("Detectron2", "https://github.com/facebookresearch/detectron2/blob/main/LICENSE")
+DETR_LICENSE = apache_license("Facebook DETR", "https://github.com/facebookresearch/detr/blob/main/LICENSE")
+PADDLEDETECTION_LICENSE = apache_license(
+    "PaddleDetection", "https://github.com/PaddlePaddle/PaddleDetection/blob/develop/LICENSE"
+)
+MMDETECTION_LICENSE = apache_license("MMDetection", "https://github.com/open-mmlab/mmdetection/blob/main/LICENSE")
+DEFAULT_EXPORT_FORMATS = ["onnx", "torchscript"]
+
+
+def trainer_row(
+    trainer_name: str,
+    base_model_family: str,
+    entrypoint: str,
+    export_formats: list[str] | None = None,
+) -> dict:
+    return {
+        "trainer_name": trainer_name,
+        "task_type": "detection",
+        "base_model_family": base_model_family,
+        "entrypoint": entrypoint,
+        "docker_image": None,
+        "supported_resume": True,
+        "supported_export_formats": list(DEFAULT_EXPORT_FORMATS if export_formats is None else export_formats),
+    }
+
+
 BASE_MODELS = [
     {"name": "yolov8n", "family": "yolov8", "task_type": "detection", **YOLO_LICENSE},
     {"name": "yolov8s", "family": "yolov8", "task_type": "detection", **YOLO_LICENSE},
@@ -80,110 +107,45 @@ BASE_MODELS = [
     {"name": "retinanet_resnet50_fpn", "family": "torchvision_detection", "task_type": "detection", **TORCHVISION_LICENSE},
     {"name": "ssd300_vgg16", "family": "torchvision_detection", "task_type": "detection", **TORCHVISION_LICENSE},
     {"name": "fcos_resnet50_fpn", "family": "torchvision_detection", "task_type": "detection", **TORCHVISION_LICENSE},
-    {"name": "yolox_s", "family": "yolox", "task_type": "detection", **apache_license("Megvii YOLOX", "https://github.com/Megvii-BaseDetection/YOLOX/blob/main/LICENSE")},
-    {"name": "yolox_m", "family": "yolox", "task_type": "detection", **apache_license("Megvii YOLOX", "https://github.com/Megvii-BaseDetection/YOLOX/blob/main/LICENSE")},
-    {"name": "detectron2_fasterrcnn_r50_fpn", "family": "detectron2", "task_type": "detection", **apache_license("Detectron2", "https://github.com/facebookresearch/detectron2/blob/main/LICENSE")},
-    {"name": "detectron2_retinanet_r50_fpn", "family": "detectron2", "task_type": "detection", **apache_license("Detectron2", "https://github.com/facebookresearch/detectron2/blob/main/LICENSE")},
-    {"name": "detr_resnet50", "family": "detr", "task_type": "detection", **apache_license("Facebook DETR", "https://github.com/facebookresearch/detr/blob/main/LICENSE")},
-    {"name": "rt_detr_r50", "family": "paddledetection", "task_type": "detection", **apache_license("PaddleDetection", "https://github.com/PaddlePaddle/PaddleDetection/blob/develop/LICENSE")},
-    {"name": "mmdet_retinanet_r50_fpn", "family": "mmdetection", "task_type": "detection", **apache_license("MMDetection", "https://github.com/open-mmlab/mmdetection/blob/main/LICENSE")},
+    {"name": "yolox_s", "family": "yolox", "task_type": "detection", **YOLOX_LICENSE},
+    {"name": "yolox_m", "family": "yolox", "task_type": "detection", **YOLOX_LICENSE},
+    {"name": "detectron2_fasterrcnn_r50_fpn", "family": "detectron2", "task_type": "detection", **DETECTRON2_LICENSE},
+    {"name": "detectron2_retinanet_r50_fpn", "family": "detectron2", "task_type": "detection", **DETECTRON2_LICENSE},
+    {"name": "detr_resnet50", "family": "detr", "task_type": "detection", **DETR_LICENSE},
+    {"name": "rt_detr_r50", "family": "paddledetection", "task_type": "detection", **PADDLEDETECTION_LICENSE},
+    {"name": "mmdet_retinanet_r50_fpn", "family": "mmdetection", "task_type": "detection", **MMDETECTION_LICENSE},
 ]
 
 TRAINERS = [
-    {
-        "trainer_name": "yolo_trainer",
-        "task_type": "detection",
-        "base_model_family": "yolov8",
-        "entrypoint": "python trainers/yolo_train.py",
-        "docker_image": None,
-        "supported_resume": True,
-        "supported_export_formats": ["onnx", "torchscript"],
-    },
-    {
-        "trainer_name": "mock_trainer",
-        "task_type": "detection",
-        "base_model_family": "*",
-        "entrypoint": "python trainers/mock_train.py",
-        "docker_image": None,
-        "supported_resume": True,
-        "supported_export_formats": [],
-    },
-    {
-        "trainer_name": "torchvision_detection_trainer",
-        "task_type": "detection",
-        "base_model_family": "torchvision_detection",
-        "entrypoint": "python trainers/torchvision_detection_train.py",
-        "docker_image": None,
-        "supported_resume": True,
-        "supported_export_formats": ["onnx", "torchscript"],
-    },
-    {
-        "trainer_name": "yolox_trainer",
-        "task_type": "detection",
-        "base_model_family": "yolox",
-        "entrypoint": "python trainers/yolox_train.py",
-        "docker_image": None,
-        "supported_resume": True,
-        "supported_export_formats": ["onnx", "torchscript"],
-    },
-    {
-        "trainer_name": "detectron2_trainer",
-        "task_type": "detection",
-        "base_model_family": "detectron2",
-        "entrypoint": "python trainers/detectron2_train.py",
-        "docker_image": None,
-        "supported_resume": True,
-        "supported_export_formats": ["onnx", "torchscript"],
-    },
-    {
-        "trainer_name": "mmdetection_trainer",
-        "task_type": "detection",
-        "base_model_family": "mmdetection",
-        "entrypoint": "python trainers/mmdetection_train.py",
-        "docker_image": None,
-        "supported_resume": True,
-        "supported_export_formats": ["onnx"],
-    },
-    {
-        "trainer_name": "paddledetection_trainer",
-        "task_type": "detection",
-        "base_model_family": "paddledetection",
-        "entrypoint": "python trainers/paddledetection_train.py",
-        "docker_image": None,
-        "supported_resume": True,
-        "supported_export_formats": ["onnx"],
-    },
-    {
-        "trainer_name": "detr_trainer",
-        "task_type": "detection",
-        "base_model_family": "detr",
-        "entrypoint": "python trainers/detr_train.py",
-        "docker_image": None,
-        "supported_resume": True,
-        "supported_export_formats": ["onnx", "torchscript"],
-    },
+    trainer_row("yolo_trainer", "yolov8", "python trainers/yolo_train.py"),
+    trainer_row("mock_trainer", "*", "python trainers/mock_train.py", []),
+    trainer_row(
+        "torchvision_detection_trainer",
+        "torchvision_detection",
+        "python trainers/torchvision_detection_train.py",
+    ),
+    trainer_row("yolox_trainer", "yolox", "python trainers/yolox_train.py"),
+    trainer_row("detectron2_trainer", "detectron2", "python trainers/detectron2_train.py"),
+    trainer_row("mmdetection_trainer", "mmdetection", "python trainers/mmdetection_train.py", ["onnx"]),
+    trainer_row("paddledetection_trainer", "paddledetection", "python trainers/paddledetection_train.py", ["onnx"]),
+    trainer_row("detr_trainer", "detr", "python trainers/detr_train.py"),
 ]
 
 
+def _upsert_rows(db: Session, model_cls, lookup_key: str, rows: list[dict]) -> None:
+    existing_rows = {getattr(row, lookup_key): row for row in db.query(model_cls).all()}
+    for row in rows:
+        existing = existing_rows.get(row[lookup_key])
+        if existing is None:
+            db.add(model_cls(**row))
+        else:
+            for field, value in row.items():
+                setattr(existing, field, value)
+
+
 def seed(db: Session) -> None:
-    existing_models = {m.name: m for m in db.query(BaseModelEntry).all()}
-    for row in BASE_MODELS:
-        existing = existing_models.get(row["name"])
-        if existing is None:
-            db.add(BaseModelEntry(**row))
-        else:
-            for key, value in row.items():
-                setattr(existing, key, value)
-
-    existing_trainers = {t.trainer_name: t for t in db.query(Trainer).all()}
-    for row in TRAINERS:
-        existing = existing_trainers.get(row["trainer_name"])
-        if existing is None:
-            db.add(Trainer(**row))
-        else:
-            for key, value in row.items():
-                setattr(existing, key, value)
-
+    _upsert_rows(db, BaseModelEntry, "name", BASE_MODELS)
+    _upsert_rows(db, Trainer, "trainer_name", TRAINERS)
     db.commit()
 
 

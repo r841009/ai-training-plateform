@@ -1,0 +1,159 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: #1f2937;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  background: #f4f6f8;
+}
+
+.shell {
+  min-height: 100vh;
+}
+
+.sidebar {
+  border-right: 1px solid #d8dee6;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.brand,
+.topbar,
+.toolbar,
+.form-grid {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.brand,
+.topbar {
+  justify-content: space-between;
+}
+
+.brand h1,
+.topbar h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.compact-form {
+  margin-top: 18px;
+}
+
+.project-list {
+  height: calc(100vh - 340px);
+}
+
+.project-row {
+  width: 100%;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-row:hover,
+.project-row.active {
+  border-color: #9bb7d4;
+  background: #eef5fb;
+}
+
+.project-row span {
+  color: #64748b;
+}
+
+.main {
+  padding: 22px;
+}
+
+.topbar {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #d8dee6;
+}
+
+.topbar p {
+  margin: 4px 0 0;
+  color: #64748b;
+}
+
+.tabs {
+  margin-top: 8px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.stats div {
+  padding: 16px;
+  border: 1px solid #d8dee6;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.stats span {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.stats label {
+  color: #64748b;
+}
+
+.toolbar,
+.form-grid {
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar .el-input,
+.toolbar .el-select,
+.form-grid .el-input,
+.form-grid .el-select {
+  width: 260px;
+}
+
+input[type="file"] {
+  max-width: 280px;
+}
+
+@media (max-width: 900px) {
+  .shell {
+    display: block;
+  }
+
+  .sidebar {
+    width: 100% !important;
+    border-right: 0;
+    border-bottom: 1px solid #d8dee6;
+  }
+
+  .project-list {
+    height: 180px;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}

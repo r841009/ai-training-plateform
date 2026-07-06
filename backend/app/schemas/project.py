@@ -1,23 +1,13 @@
-import re
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-
-PROJECT_CODE_PATTERN = re.compile(r"^[A-Z0-9_]+$")
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProjectCreate(BaseModel):
-    project_code: str = Field(min_length=1, max_length=64)
+    project_code: str = Field(min_length=1, max_length=64, pattern=r"^[A-Z0-9_]+$")
     name: str = Field(min_length=1, max_length=255)
     description: str | None = None
-
-    @field_validator("project_code")
-    @classmethod
-    def validate_project_code(cls, v: str) -> str:
-        if not PROJECT_CODE_PATTERN.match(v):
-            raise ValueError("project_code must contain only uppercase letters, digits, or underscore")
-        return v
 
 
 class ProjectUpdate(BaseModel):

@@ -40,3 +40,11 @@ def get_training_job(
     training_job = service.get_training_job(project_id, training_job_id)
     return success_response(TrainingJobRead.model_validate(training_job))
 
+
+@router.post("/{training_job_id}/resume", response_model=ApiResponse[TrainingJobRead])
+def resume_training_job(
+    project_id: uuid.UUID,
+    training_job_id: uuid.UUID,
+    service: TrainingJobService = Depends(get_service),
+):
+    return success_response(TrainingJobRead.model_validate(service.resume_training_job(project_id, training_job_id)))

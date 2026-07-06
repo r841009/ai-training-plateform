@@ -185,6 +185,13 @@
 - Model Versions 必須只顯示目前 Project 的模型
 - 不要做全平台混合 Model Versions 頁面
 
+實作狀態：
+
+- 已建立 `frontend/index.html`，使用 Vue 3 + Element Plus CDN，免 Node build
+- 已建立 Project List / Project Detail
+- Project Detail 已包含 Overview、Dataset Versions、Training Jobs、Model Versions、Evaluation Results、Retrain 操作
+- Backend 已加入 localhost CORS，支援本機前端呼叫 API
+
 ## Phase 16：整合測試
 
 目標：

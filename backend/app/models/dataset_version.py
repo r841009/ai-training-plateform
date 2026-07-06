@@ -7,18 +7,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base
 from app.types import GUID
 
-# Only READY datasets may be used for training (validation/split logic lands in Phase 5).
-DATASET_STATUSES = (
-    "CREATED",
-    "UPLOADING",
-    "UPLOADED",
-    "VALIDATING",
-    "INVALID",
-    "PROCESSING",
-    "READY",
-    "ARCHIVED",
-)
-
 
 class DatasetVersion(Base):
     __tablename__ = "dataset_versions"
